@@ -79,12 +79,12 @@ try {
   });
   app.register(fastifyStatic, {
     root: epoxyPath,
-    prefix: "/e/",
+    prefix: "/ep/",
     decorateReply: false,
   });
   app.register(fastifyStatic, {
     root: libcurlPath,
-    prefix: "/l/",
+    prefix: "/lb/",
     decorateReply: false,
   });
   app.register(fastifyStatic, {
