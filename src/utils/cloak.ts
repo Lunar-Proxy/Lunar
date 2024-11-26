@@ -44,8 +44,8 @@ async function cloak(): Promise<void> {
       if (!iframe.src) {
         const iStyles = {
           border: "none",
-          width: "100vw",
-          height: "100vh",
+          width: "100%",
+          height: "100%",
         };
         Object.assign(iframe.style, iStyles);
         iframe.src = location.href;
