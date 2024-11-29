@@ -23,9 +23,11 @@ document.addEventListener("DOMContentLoaded", () => {
         section.classList.add('hidden');
       });
       
-      const targetSection = document.getElementById(targetId);
-      if (targetSection) {
-        targetSection.classList.remove('hidden');
+      if (targetId) {
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+          targetSection.classList.remove('hidden');
+        }
       }
     });
   });
