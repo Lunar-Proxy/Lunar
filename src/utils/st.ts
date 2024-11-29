@@ -1,36 +1,35 @@
 document.addEventListener("DOMContentLoaded", () => {
   const pinput = document.getElementById("pinput") as HTMLSelectElement | null;
   const firstSection = document.querySelector(
-    "#content-container > div:not(.hidden)",
+    "#content-container > div:not(.hidden)"
   ) as HTMLElement | null;
-  const bginput = document.getElementById(
-    "bg-input",
-  ) as HTMLInputElement | null;
-  const toggle = document.getElementById(
-    "cloak-toggle",
-  ) as HTMLInputElement | null;
+  const bginput = document.getElementById("bg-input") as HTMLInputElement | null;
+  const toggle = document.getElementById("cloak-toggle") as HTMLInputElement | null;
   const slider = toggle?.nextElementSibling as HTMLElement | null;
   const dot = document.querySelector(".dot") as HTMLElement | null;
 
-  document.querySelectorAll(".setting-btn").forEach((button) => {
-    button.addEventListener("click", (event) => {
-      const targetElement = event.currentTarget as HTMLElement;
-      const target = targetElement.getAttribute("data-target");
-
-      if (target) {
-        document
-          .querySelectorAll("#content-container > div")
-          .forEach((section) => {
-            section.classList.add("hidden");
-          });
-        const targetSection = document.getElementById(target);
-        if (targetSection) {
-          targetSection.classList.remove("hidden");
-        }
+  const buttons = document.querySelectorAll('.setting-btn');
+  const sections = document.querySelectorAll('[id^="website"], [id^="ptype"], [id^="customization"], [id^="credits"], [id^="info"]');
+  
+  sections.forEach(section => {
+    section.classList.add('hidden');
+  });
+  
+  buttons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('data-target');
+      
+      sections.forEach(section => {
+        section.classList.add('hidden');
+      });
+      
+      const targetSection = document.getElementById(targetId);
+      if (targetSection) {
+        targetSection.classList.remove('hidden');
       }
     });
   });
-
+  
   if (!firstSection) {
     const defaultSection = document.getElementById("website");
     if (defaultSection) {
@@ -39,18 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   pinput?.addEventListener("change", function () {
-    if (pinput) {
-      const option = this.value;
-      localStorage.setItem("@lunar/settings/engine", option);
-      console.debug("Search engine is set to", option);
-      window.location.reload();
-    }
+    const option = this.value;
+    localStorage.setItem("@lunar/settings/engine", option);
+    console.debug("Search engine is set to", option);
+    window.location.reload();
   });
 
   if (pinput) {
     pinput.value =
-      localStorage.getItem("@lunar/settings/engine") ||
-      "https://www.google.com/search?q=";
+      localStorage.getItem("@lunar/settings/engine") || "https://www.google.com/search?q=";
   }
 
   if (bginput) {
@@ -58,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.getItem("@lunar/settings/bg") || "Enter an image URL";
   }
 
+  // Handle the cloak toggle
   const utoggle = () => {
     const cloakState = localStorage.getItem("@lunar/settings/ab");
     if (cloakState === "on" || cloakState === null) {
@@ -99,22 +96,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   utoggle();
 
-  const engineDropdownToggle = document.getElementById(
-    "engine-dropdown-toggle",
-  ) as HTMLButtonElement;
-  const engineDropdownMenu = document.getElementById(
-    "engine-dropdown-menu",
-  ) as HTMLUListElement;
-  const selectedEngine = document.getElementById(
-    "selected-engine",
-  ) as HTMLSpanElement;
+  const engineDropdownToggle = document.getElementById("engine-dropdown-toggle") as HTMLButtonElement;
+  const engineDropdownMenu = document.getElementById("engine-dropdown-menu") as HTMLUListElement;
+  const selectedEngine = document.getElementById("selected-engine") as HTMLSpanElement;
 
   if (selectedEngine) {
     const savedEngine = localStorage.getItem("@lunar/settings/engine");
     if (savedEngine) {
-      const currentItem = engineDropdownMenu.querySelector(
-        `[data-value="${savedEngine}"]`,
-      );
+      const currentItem = engineDropdownMenu.querySelector(`[data-value="${savedEngine}"]`);
       if (currentItem) {
         selectedEngine.textContent = currentItem.textContent;
       }
@@ -155,12 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  const wispInput: HTMLInputElement | null = document.getElementById(
-    "wispserver",
-  ) as HTMLInputElement;
-  const wispUrl =
-    localStorage.getItem("@lunar/settings/wisp") ||
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/p/`;
+  const wispInput: HTMLInputElement | null = document.getElementById("wispserver") as HTMLInputElement;
+  const wispUrl = localStorage.getItem("@lunar/settings/wisp") || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/p/`;
   if (wispInput) {
     wispInput.placeholder = wispUrl;
   }
@@ -198,21 +183,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const currentProxy = localStorage.getItem("@lunar/settings/ptype");
     if (currentProxy) {
-      const currentItem = proxyDropdownMenu.querySelector(
-        `[data-value="${currentProxy}"]`,
-      );
+      const currentItem = proxyDropdownMenu.querySelector(`[data-value="${currentProxy}"]`);
       if (currentItem) {
         selectedProxy.textContent = currentItem.textContent;
       }
     }
   }
 
-  const transportDropdownToggle = document.getElementById(
-    "transport-dropdown-toggle",
-  );
-  const transportDropdownMenu = document.getElementById(
-    "transport-dropdown-menu",
-  );
+  const transportDropdownToggle = document.getElementById("transport-dropdown-toggle");
+  const transportDropdownMenu = document.getElementById("transport-dropdown-menu");
   const selectedTransport = document.getElementById("selected-transport");
 
   if (transportDropdownToggle && transportDropdownMenu && selectedTransport) {
@@ -244,42 +223,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const currentTransport = localStorage.getItem("@lunar/settings/transport");
     if (currentTransport) {
-      const currentItem = transportDropdownMenu.querySelector(
-        `[data-value="${currentTransport}"]`,
-      );
+      const currentItem = transportDropdownMenu.querySelector(`[data-value="${currentTransport}"]`);
       if (currentItem) {
         selectedTransport.textContent = currentItem.textContent;
       }
     }
   }
-});
-
-document.getElementById("reset-wispserver")?.addEventListener("click", () => {
-  const wsInput = document.getElementById("wispserver") as HTMLInputElement;
-  wsInput.value = "";
-  localStorage.removeItem("@lunar/settings/wisp");
-  window.location.reload();
-});
-
-document.getElementById("save-wispserver")?.addEventListener("click", () => {
-  const wsInput = document.getElementById("wispserver") as HTMLInputElement;
-  const wsServer = wsInput.value;
-  console.log(`Wisp Server saved: ${wsServer}`);
-  localStorage.setItem("@lunar/settings/wisp", `${wsServer}`);
-  window.location.reload();
-});
-
-document.getElementById("reset-bg-input")?.addEventListener("click", () => {
-  const bgInput = document.getElementById("bg-input") as HTMLInputElement;
-  bgInput.value = "";
-  localStorage.removeItem("@lunar/settings/bg");
-  window.location.reload();
-});
-
-document.getElementById("save-bg-input")?.addEventListener("click", () => {
-  const bgInput = document.getElementById("bg-input") as HTMLInputElement;
-  const bgValue = bgInput.value;
-  console.log(`Background Image URL saved: ${bgValue}`);
-  localStorage.setItem("@lunar/settings/bg", `${bgValue}`);
-  window.location.reload();
 });
