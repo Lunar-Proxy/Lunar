@@ -26,7 +26,7 @@ function LU() {
 }
 
 export default defineConfig({
-  output: "hybrid",
+  output: "server",
   image: {
     service: passthroughImageService(),
   },
