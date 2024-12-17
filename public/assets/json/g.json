@@ -49,7 +49,7 @@
     "category": "Action"
   },
   {
-    "name": "8 Ball Pool",
+    "name": "8 Balls Pool",
     "website": "https://8ball-pool.io/",
     "icon": "../assets/logo/8ball.webp",
     "issue": false,
@@ -63,7 +63,7 @@
     "category": "Action"
   },
   {
-    "name": "Geometry Dash",
+    "name": "Enzos adiction",
     "website": "https://geometrygame.org/",
     "icon": "../assets/logo/geometrydash.png",
     "issue": false,
