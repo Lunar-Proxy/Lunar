@@ -42,14 +42,14 @@
     "category": "Action"
   },
   {
-    "name": "Drift Balls",
+    "name": "Drift Boss",
     "website": "https://www.crazygames.com/game/drift-boss",
     "icon": "../assets/logo/driftboss.jpg",
     "issue": false,
     "category": "Action"
   },
   {
-    "name": "8 Balls Pool",
+    "name": "8 Ball Pool",
     "website": "https://8ball-pool.io/",
     "icon": "../assets/logo/8ball.webp",
     "issue": false,
@@ -63,7 +63,7 @@
     "category": "Action"
   },
   {
-    "name": "Enzos adiction",
+    "name": "Geometry Dash",
     "website": "https://geometrygame.org/",
     "icon": "../assets/logo/geometrydash.png",
     "issue": false,
