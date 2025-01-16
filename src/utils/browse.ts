@@ -1,162 +1,191 @@
-import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
-import setup from "./config.ts";
+import { Settings } from '@src/utils/config';
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("./sw.js", { scope: "/p/" })
-    .then(({ scope }) =>
-      console.debug("Service Worker registered with scope:", scope),
-    )
-    .catch((error) =>
-      console.error("Service Worker registration failed:", error),
-    );
-}
-
-const iframe = document.getElementById("iframe") as HTMLIFrameElement | null;
-const bar = document.getElementById("url") as HTMLInputElement | null;
-const clear = document.getElementById("clear") as HTMLButtonElement | null;
-const favicon = document.getElementById("favicon") as HTMLImageElement | null;
-const title = document.getElementById("name") as HTMLTitleElement | null;
-const copy = document.getElementById("copy") as HTMLButtonElement | null;
-const f = document.getElementById("forward") as HTMLButtonElement | null;
-const b = document.getElementById("back") as HTMLButtonElement | null;
-const r = document.getElementById("reload") as HTMLButtonElement | null;
-let previousUrl: string | undefined;
-declare const ScramjetController: any;
+const bak = document.getElementById('back') as HTMLButtonElement;
+const fwd = document.getElementById('forward') as HTMLButtonElement;
+const refresh = document.getElementById('reload') as HTMLButtonElement;
+const starting = document.getElementById('starting') as HTMLDivElement;
+const frame = document.getElementById('frame') as HTMLIFrameElement;
+const ff = document.getElementById('full-screen') as HTMLButtonElement;
+const cnsl = document.getElementById('console') as HTMLButtonElement;
+const star = document.getElementById('fav') as HTMLButtonElement;
+const copy = document.getElementById('link') as HTMLButtonElement;
 const scram = new ScramjetController({
-  prefix: "/sj/",
+  prefix: '/scram/',
   files: {
-    wasm: "/assets/s/wasm.js",
-    worker: "/assets/s/worker.js",
-    client: "/assets/s/client.js",
-    shared: "/assets/s/shared.js",
-    sync: "/assets/s/sync.js",
+    wasm: '/assets/sj/wasm.js',
+    worker: '/assets/sj/worker.js',
+    client: '/assets/sj/client.js',
+    shared: '/assets/sj/shared.js',
+    sync: '/assets/sj/sync.js',
+  },
+  defaultFlags: {
+    serviceworkers: true,
   },
 });
-
 window.sj = scram;
-scram.init("./sjsw.js");
 
-async function frame() {
-  const connection = new BareMuxConnection("/bm/worker.js");
-  const transport = setup.transport === "ep" ? "/ep/index.mjs" : "/lb/index.mjs";
-  if ((await connection.getTransport()) !== transport) {
-    console.debug(`Using ${setup.transport === "ep" ? "epoxy" : "libcurl"} transport`);
-    await connection.setTransport(transport, [{ wisp: setup.wisp }]);
+type PageElement = {
+  [key: string]: string;
+};
+
+const elements: PageElement = {
+  ap: './ap',
+  gam: './gm',
+  gear: './s',
+};
+
+Object.entries(elements).forEach(([key, path]) => {
+  const element = document.getElementById(key);
+  if (element) {
+    element.addEventListener('click', () => {
+      starting.classList.add('hidden');
+      console.debug('Navigating to ' + path);
+      if (frame) frame.src = path as string;
+    });
   }
-
-  setup.proxy === "uv" ? uv() : sj();
-}
-
-function validate(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function uv() {
-  console.debug("Using UV");
-  const newurl = validate(setup.gourl)
-    ? setup.gourl.startsWith("http")
-      ? setup.gourl
-      : `https://${setup.gourl}`
-    : setup.engine + encodeURIComponent(setup.gourl);
-
-  if (iframe) {
-    iframe.src = `/p/${config.encodeUrl(newurl)}`;
-  }
-}
-
-function sj() {
-  console.debug("Using scramjet (BETA)");
-  const newurl = validate(setup.gourl)
-    ? setup.gourl.startsWith("http")
-      ? setup.gourl
-      : `https://${setup.gourl}`
-    : setup.engine + encodeURIComponent(setup.gourl);
-
-  if (iframe) {
-    iframe.src = `${scram.encodeUrl(newurl)}`;
-  }
-}
-
-function updateContent() {
-  if (iframe) {
-    const url = iframe.contentWindow?.__uv$location?.href;
-    if (url && url !== previousUrl) {
-      const charLimit = limit();
-      if (bar) {
-        bar.value = url.length > charLimit ? `${url.substring(0, charLimit)}...` : url;
-      }
-      previousUrl = url;
-    }
-    let image: string = "";
-    if (setup.proxy === "uv") {
-      image = `https://www.google.com/s2/favicons?domain=${iframe.contentWindow!.__uv$location?.origin}&sz=24`;
-    } else if (setup.proxy === "sj") {
-      const cleanedUrl = iframe.contentWindow?.location.href.replace(scram.prefix, "");
-      image = `https://www.google.com/s2/favicons?domain=${cleanedUrl}&sz=24`;
-    }
-    if (favicon) {
-      favicon.src = image;
-      favicon.onerror = () => {
-        favicon.src = "https://www.google.com/s2/favicons?domain=null&sz=24";
-      };
-    }
-    if (title) {
-      title.textContent = iframe.contentWindow?.document.title || "";
-    }
-  } else {
-    throw new Error("iframe not found");
-  }
-}
-
-iframe?.addEventListener("load", () => {
-  setInterval(updateContent, 1000);
-
-  bar?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      setup.gourl = bar.value;
-      frame();
-    }
-  });
-
-  clear?.addEventListener("click", () => {
-    if (bar) {
-      bar.value = "";
-      bar.focus();
-    }
-  });
-
-  copy?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(iframe.contentWindow!.__uv$location?.href || "");
-      alert("Copied to clipboard");
-    } catch {
-      new Error("Failed to copy url to clipboard");
-    }
-  });
-
-  f?.addEventListener("click", () => {
-    iframe.contentWindow?.history.forward();
-  });
-
-  b?.addEventListener("click", () => {
-    iframe.contentWindow?.history.back();
-  });
-
-  r?.addEventListener("click", () => {
-    iframe.contentWindow?.location.reload();
-  });
 });
 
-function limit() {
-  const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-  const charWidth = 8;
-  return Math.floor(vw / charWidth);
+if (copy) {
+  copy.addEventListener('click', async () => {
+    const FrameUrl = new URL(frame.contentWindow!.location.href);
+    const pathname = FrameUrl.pathname;
+
+    try {
+      if (!frame || !frame.src || frame.src === 'about:blank') {
+        console.log('Cannot copy URL without a valid source.');
+        return;
+      }
+    } catch (e) {
+      console.error('Error copying URL:', e);
+    }
+
+    if (!pathname.startsWith('/p/') && !pathname.startsWith('/scram/')) {
+      await navigator.clipboard.writeText(frame.contentWindow!.location.href);
+      alert('URL copied to clipboard!');
+      return;
+    }
+
+    try {
+      const backend = await Settings.get('backend');
+      let url;
+
+      if (backend === 'uv') {
+        url = UltraConfig.decodeUrl(
+          frame.contentWindow!.location.href.split('/p/')[1] ||
+            frame.contentWindow!.location.href
+        );
+      } else {
+        url = scram.decodeUrl(
+          frame.contentWindow!.location.href.split('/scram/')[1] ||
+            frame.contentWindow!.location.href
+        );
+      }
+
+      url = url || frame.src;
+
+      await navigator.clipboard.writeText(url);
+      alert('URL copied to clipboard!');
+    } catch (error) {
+      console.error('Error fetching backend from settings:', error);
+    }
+  });
 }
 
-frame();
+if (cnsl) {
+  cnsl.addEventListener('click', () => {
+    try {
+      if (!frame || !frame.src || frame.src === 'about:blank') {
+        console.log('Cannot copy URL without a valid source.');
+        return;
+      }
+    } catch (e) {
+      console.error('Error copying URL:', e);
+    }
+    const eruda = frame.contentWindow?.eruda;
+    if (eruda) {
+      if (eruda._isInit) {
+        eruda.destroy();
+        console.debug('Eruda console destroyed.');
+        return;
+      } else {
+        console.debug('Eruda console is not initialized.');
+      }
+    } else {
+      console.debug('Eruda console not loaded yet.');
+    }
+
+    if (!eruda || !eruda._isInit) {
+      if (frame.contentDocument) {
+        var script = frame.contentDocument.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/eruda';
+        script.onload = function () {
+          frame.contentWindow?.eruda.init();
+          frame.contentWindow?.eruda.show();
+          console.debug('Eruda console initialized.');
+        };
+        frame.contentDocument.head.appendChild(script);
+      } else {
+        throw new Error('Cannot inject script.');
+      }
+    }
+  });
+}
+
+if (ff) {
+  ff.addEventListener('click', () => {
+    if (frame && frame.src) {
+      frame.requestFullscreen();
+    } else {
+      console.log('Cannot go fullscreen without a valid source.');
+    }
+  });
+}
+
+if (bak) {
+  bak.addEventListener('click', () => {
+    frame.contentWindow!.history.forward();
+  });
+}
+
+if (fwd) {
+  fwd.addEventListener('click', () => {
+    frame.contentWindow!.history.back();
+  });
+}
+
+if (refresh) {
+  refresh.addEventListener('click', () => {
+    frame.contentWindow!.location.reload();
+  });
+}
+
+if (star) {
+  star.addEventListener('click', async () => {
+    let originalUrl;
+    if (frame && frame.src) {
+      const nickname = prompt('Enter a nickname for this favorite:');
+      if (nickname) {
+        const favorites = JSON.parse(
+          localStorage.getItem('@lunar/favorites') || '[]'
+        );
+        try {
+          if ((await Settings.get('backend')) == 'sj') {
+            originalUrl = `${scram.decodeUrl(frame.contentWindow!.location.href.split('/scram/')[1] || frame.contentWindow!.location.href)}`;
+          } else {
+            originalUrl = `${UltraConfig.decodeUrl(frame.contentWindow!.location.href.split('/p/')[1] || frame.contentWindow!.location.href)}`;
+          }
+          const newFav = { nickname, url: originalUrl };
+          favorites.push(newFav);
+          localStorage.setItem('@lunar/favorites', JSON.stringify(favorites));
+          console.debug(`Favorite "${nickname}" added successfully!`);
+        } catch (error) {
+          console.error('Error adding favorite:', error);
+        }
+      } else {
+        alert('Favorite not saved. Nickname is required.');
+      }
+    } else {
+      throw new Error('Cannot favorite an invalid page');
+    }
+  });
+}

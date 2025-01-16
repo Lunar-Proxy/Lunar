@@ -1,114 +1,131 @@
-import Fastify from "fastify";
-import fastifyMiddie from "@fastify/middie";
-import fastifyStatic from "@fastify/static";
-import fastifyCompress from "@fastify/compress";
-import fs from "node:fs";
-import { fileURLToPath } from "node:url";
-import { exec } from "child_process";
-import chalk from "chalk";
-import { createServer } from "http";
-import { Socket } from "net";
-import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
-import { libcurlPath } from "@mercuryworkshop/libcurl-transport";
-import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-import { server as wisp } from "@mercuryworkshop/wisp-js/server";
+import Fastify from 'fastify';
+import fastifyMiddie from '@fastify/middie';
+import fastifyStatic from '@fastify/static';
+import fastifyCompress from '@fastify/compress';
+import basicAuth from '@fastify/basic-auth';
+import fs from 'node:fs';
+import { execSync } from 'child_process';
+import chalk from 'chalk';
+import { createServer } from 'node:http';
+import { Socket } from 'node:net';
+import { server as wisp } from '@mercuryworkshop/wisp-js/server';
+import path from 'node:path';
+import config from './config';
 
-const port: number = Number(process.env.PORT) || 8080;
-const host: string = process.env.HOST || "localhost";
+const port: number = config.port;
+const host: string = '0.0.0.0';
 
-const build = async () => {
-  if (!fs.existsSync("dist")) {
-    console.log(
-      chalk.yellow.bold("🚧 Cannot find dist folder, building lunar..."),
-    );
+async function build() {
+  if (!fs.existsSync('dist')) {
+    console.log(chalk.yellow.bold('Lunar is not built, building now...'));
     try {
-      const Process = exec("npm run build");
-      Process.stdout?.on("data", (data) => {
-        process.stdout.write(chalk.cyan(data));
-      });
-      Process.stderr?.on("data", (data) => {
-        process.stderr.write(chalk.red(data));
-      });
-      await new Promise((resolve, reject) => {
-        Process.on("close", (code) => {
-          if (code === 0) {
-            resolve(true);
-          } else {
-            reject(
-              new Error(
-                `⚠️ Lunar failed to build failed with exit code ${code}`,
-              ),
-            );
-          }
-        });
-      });
-      console.log(chalk.green.bold("✅ Dist folder was successfully built."));
+      execSync('pnpm build', { stdio: 'inherit' });
+      console.log(chalk.green.bold('✅ Lunar was built successfully!'));
     } catch (error) {
       throw new Error(
-        `${chalk.red.bold("❌ Failed to build the dist folder:")} ${error instanceof Error ? error.message : error}`,
+        `Build Error: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  } else {
+    console.log(chalk.blue.bold('📂 Lunar is already built. Skipping build.'));
   }
-};
+}
 
 const app = Fastify({
   logger: false,
   serverFactory: (handler) =>
-    createServer(handler).on("upgrade", (req, socket: Socket, head) => {
-      if (req.url?.startsWith("/goo")) {
-        wisp.routeRequest(req, socket, head);
-      } else {
-        socket.destroy();
-      }
+    createServer(handler).on('upgrade', (req, socket: Socket, head) => {
+      wisp.routeRequest(req, socket, head);
     }),
 });
 
-try {
-  await build();
-  await app.register(fastifyMiddie);
-  await app.register(fastifyCompress, { encodings: ["deflate", "gzip", "br"] });
+await app.register(fastifyCompress, { encodings: ['deflate', 'gzip', 'br'] });
 
-  if (fs.existsSync("./dist/server/entry.mjs")) {
-    //@ts-ignore
-    const module = await import("./dist/server/entry.mjs");
-    app.use(module.handler);
-  }
-
-  app.register(fastifyStatic, {
-    root: fileURLToPath(new URL("./dist/client", import.meta.url)),
-  });
-  app.register(fastifyStatic, {
-    root: epoxyPath,
-    prefix: "/ep/",
-    decorateReply: false,
-  });
-  app.register(fastifyStatic, {
-    root: libcurlPath,
-    prefix: "/lb/",
-    decorateReply: false,
-  });
-  app.register(fastifyStatic, {
-    root: baremuxPath,
-    prefix: "/bm/",
-    decorateReply: false,
-  });
-
-  app.listen({ host, port }, (err, address) => {
-    if (err) {
-      console.error(chalk.red.bold(`❌ Failed to start lunar: ${err.message}`));
-      process.exit(1);
-    } else {
+if (config.auth.protect) {
+  console.log(chalk.magenta.bold('🔒 Password Protection is enabled.'));
+  config.auth.users.forEach((user) => {
+    Object.entries(user).forEach(([username, password]) => {
       console.log(
-        chalk.green.bold(
-          `🌙 Lunar v${process.env.npm_package_version} is running on:`,
-        ),
+        chalk.yellow('🔑 Listing usernames and passwords for authentication')
       );
-      console.log(chalk.blue(`🌐 Local: http://${host}:${port}`));
-      console.log(chalk.blue(`🌍 Network: ${address}`));
-    }
+      console.log(chalk.cyan(`Username: ${username}, Password: ${password}`));
+    });
   });
-} catch (error: unknown) {
-  throw new Error(
-    `${chalk.red.bold("❌ An error happend while trying to start lunar:")} ${error instanceof Error ? error.message : error}`,
-  );
+
+  await app.register(basicAuth, {
+    authenticate: true,
+    validate(username, password, _req, _reply, done) {
+      const user = config.auth.users.find((user) => user[username]);
+      if (user && user[username] === password) {
+        if (config.auth.log) {
+          console.log(chalk.green(`✅ User "${username}" authenticated.`));
+        }
+        return done();
+      }
+      return done(new Error('Invalid credentials'));
+    },
+  });
+  app.addHook('onRequest', app.basicAuth);
 }
+
+app.setErrorHandler((error, _request, reply) => {
+  if (error.statusCode === 401) {
+    reply.status(401).header('Content-Type', 'text/html').send(`
+         <!doctype html>
+<html>
+  <head>
+    <title>Welcome to nginx!</title>
+    <style>
+      html {
+        color-scheme: light dark;
+      }
+      body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Welcome to nginx!</h1>
+    <p>
+      If you see this page, the nginx web server is successfully installed and
+      working. Further configuration is required. If you are expecting another
+      page, please check your network or
+      <a id="rcheck" onclick="location.reload();"><b>Refresh this page</b></a>
+    </p>
+
+    <p>
+      For online documentation and support please refer to
+      <a href="http://nginx.org/">nginx.org</a>.<br />
+      Commercial support is available at
+      <a href="http://nginx.com/">nginx.com</a>.
+    </p>
+
+    <p><em>Thank you for using nginx.</em></p>
+  </body>
+</html>
+      `);
+  } else {
+    reply.send(error);
+  }
+});
+await build();
+
+// @ts-ignore dir may not exist
+const { handler } = await import('./dist/server/entry.mjs');
+app.register(fastifyStatic, {
+  root: path.join(import.meta.dirname, 'dist', 'client'),
+});
+await app.register(fastifyMiddie);
+app.use(handler);
+
+app.listen({ host, port }, (err, address) => {
+  if (err) {
+    throw new Error(`❌ Failed to start Lunar: ${err.message}`);
+  } else {
+    console.log(chalk.green.bold(`\n🌙 Lunar is running at:`));
+    console.log(chalk.blue.bold(`🌐 Local: http://localhost:${port}`));
+    console.log(chalk.blue.bold(`🌍 Network: ${address}`));
+  }
+});
