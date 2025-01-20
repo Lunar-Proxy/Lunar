@@ -1,3 +1,7 @@
+# NOTICE
+
+This version of lunar is done updating, meaning that it will no longer have updates to it. Please switch to [current version of lunar](https://github.com/Lunar-Proxy/lunar-v1)
+
 # Lunar
 
 [![Discord Server](https://skillicons.dev/icons?i=discord)](https://discord.gg/fuPtWjYuf8) [![Github Repo](https://skillicons.dev/icons?i=github)](https://github.com/Lunar-proxy/Lunar)
